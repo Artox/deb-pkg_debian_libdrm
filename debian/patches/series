@@ -2,3 +2,4 @@
 03_build_against_librt.diff
 revert-nouveau-rewrite.diff
 intel-cloexec-kbsd.diff
+drm-update-arm.patch
