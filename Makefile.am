@@ -18,9 +18,9 @@
 #  IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 #  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
+include Makefile.sources
 
-DISTCHECK_CONFIGURE_FLAGS = --enable-nouveau-experimental-api --enable-radeon-experimental-api
+ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 
 pkgconfigdir = @pkgconfigdir@
 pkgconfig_DATA = libdrm.pc
@@ -49,7 +49,11 @@ if HAVE_EXYNOS
 EXYNOS_SUBDIR = exynos
 endif
 
-SUBDIRS = . $(LIBKMS_SUBDIR) $(INTEL_SUBDIR) $(NOUVEAU_SUBDIR) $(RADEON_SUBDIR) $(OMAP_SUBDIR) $(EXYNOS_SUBDIR) tests include man
+if HAVE_FREEDRENO
+FREEDRENO_SUBDIR = freedreno
+endif
+
+SUBDIRS = . $(LIBKMS_SUBDIR) $(INTEL_SUBDIR) $(NOUVEAU_SUBDIR) $(RADEON_SUBDIR) $(OMAP_SUBDIR) $(EXYNOS_SUBDIR) $(FREEDRENO_SUBDIR) tests man
 
 libdrm_la_LTLIBRARIES = libdrm.la
 libdrm_ladir = $(libdir)
@@ -57,24 +61,27 @@ libdrm_la_LDFLAGS = -version-number 2:4:0 -no-undefined
 libdrm_la_LIBADD = @CLOCK_LIB@
 
 libdrm_la_CPPFLAGS = -I$(top_srcdir)/include/drm
+AM_CFLAGS = \
+	$(VALGRIND_CFLAGS)
 
-libdrm_la_SOURCES =				\
-	xf86drm.c				\
-	xf86drmHash.c				\
-	xf86drmRandom.c				\
-	xf86drmSL.c				\
-	xf86drmMode.c				\
-	xf86atomic.h				\
-	libdrm_lists.h
+libdrm_la_SOURCES = $(LIBDRM_FILES)
 
 libdrmincludedir = ${includedir}
-libdrminclude_HEADERS = xf86drm.h xf86drmMode.h
+libdrminclude_HEADERS = $(LIBDRM_H_FILES)
 
-EXTRA_DIST = libdrm.pc.in include/drm/*
+EXTRA_DIST = Android.mk
+
+klibdrmincludedir = ${includedir}/libdrm
+klibdrminclude_HEADERS = $(LIBDRM_INCLUDE_H_FILES)
+
+if HAVE_VMWGFX
+klibdrminclude_HEADERS += $(LIBDRM_INCLUDE_VMWGFX_H_FILES)
+endif
+
 
 copy-headers :
-	cp -r $(kernel_source)/usr/include/drm $(top_srcdir)/include
+	cp -r $(kernel_source)/include/uapi/drm/*.h $(top_srcdir)/include/drm/
 
 commit-headers : copy-headers
-	git add include
+	git add include/drm/*.h
 	git commit -am "Copy headers from kernel $$(GIT_DIR=$(kernel_source)/.git git describe)"
